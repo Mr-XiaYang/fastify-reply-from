@@ -24,11 +24,6 @@ const {
 } = require('./lib/errors')
 
 const fastifyReplyFrom = fp(function from (fastify, opts, next) {
-  const contentTypesToEncode = new Set([
-    'application/json',
-    ...(opts.contentTypesToEncode || [])
-  ])
-
   const retryMethods = new Set(opts.retryMethods || [
     'GET', 'HEAD', 'OPTIONS', 'TRACE'])
 
@@ -107,19 +102,22 @@ const fastifyReplyFrom = fp(function from (fastify, opts, next) {
       if (this.request.body instanceof Stream) {
         body = this.request.body
       } else {
-        // Per RFC 7231 §3.1.1.5 if this header is not present we MAY assume application/octet-stream
-        let contentType = 'application/octet-stream'
+        let contentType
         if (req.headers['content-type']) {
-          const plainContentType = fastContentTypeParse.parse(req.headers['content-type'])
-          contentType = plainContentType.type
+          contentType = fastContentTypeParse.parse(req.headers['content-type']).type
+          if(contentType === 'application/json') {
+            body = JSON.stringify(this.request.body);
+          }
+          if(contentType === 'application/x-www-form-urlencoded') {
+            body = querystring.stringify(this.request.body);
+          }
+        } else {
+          // Per RFC 7231 §3.1.1.5 if this header is not present we MAY assume application/octet-stream
+          contentType = 'application/octet-stream'
+          body = this.request.body
         }
-
-        const shouldEncodeJSON = contentTypesToEncode.has(contentType)
-        // transparently support JSON encoding
-        body = shouldEncodeJSON ? JSON.stringify(this.request.body) : this.request.body
-        // update origin request headers after encoding
-        headers['content-length'] = Buffer.byteLength(body)
         headers['content-type'] = contentType
+        headers['content-length'] = Buffer.byteLength(body)
       }
     }
 
