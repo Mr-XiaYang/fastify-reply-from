@@ -105,7 +105,6 @@ declare namespace fastifyReplyFrom {
     http?: HttpOptions;
     http2?: Http2Options | boolean;
     undici?: Pool.Options & { proxy?: string  | URL | ProxyAgent.Options };
-    contentTypesToEncode?: string[];
     retryMethods?: (HTTPMethods | 'TRACE')[];
     maxRetriesOn503?: number;
     disableRequestLogging?: boolean;
